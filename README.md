@@ -1,2 +1,1 @@
-# DatabaseProj
-Project for Database
+1) npm install

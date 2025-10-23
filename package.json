@@ -1,0 +1,23 @@
+{
+  "name": "databaseproj-backend",
+  "version": "1.0.0",
+  "description": "Backend for DatabaseProj with MySQL connection to AWS RDS",
+  "main": "backend/mysql_db.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "test-connection": "node backend/testConnection.js"
+  },
+  "keywords": [
+    "mysql",
+    "aws",
+    "rds"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^5.1.0",
+    "mysql2": "^3.6.0"
+  }
+}
