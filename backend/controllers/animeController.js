@@ -12,7 +12,8 @@ async function listAnime(req, res) {
       sql += ' WHERE title LIKE ? OR synopsis LIKE ?';
       params.push(`%${q}%`, `%${q}%`);
     }
-    sql += ' ORDER BY score IS NULL, score DESC, title ASC LIMIT 200';
+  // Sort by best rank first; put rows without a rank at the bottom
+  sql += ' ORDER BY score_rank IS NULL, score_rank ASC, title ASC LIMIT 200';
 
     const [rows] = await pool.query(sql, params);
     res.json({ success: true, data: rows });
