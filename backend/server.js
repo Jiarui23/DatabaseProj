@@ -13,19 +13,37 @@ app.use(express.json());
 // Serve static files from frontend directory
 app.use(express.static(path.join(__dirname, '../frontend')));
 
-// API endpoint to get namelist data
-app.get('/api/namelist', async (req, res) => {
+// Serve the index page with external CSS/JS
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/index.html'));
+});
+
+// API endpoint to get anime list data from anime_hub.anime
+app.get('/api/anime', async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM testdb.namelist');
-    res.json({ 
-      success: true, 
-      data: rows 
-    });
+    const q = (req.query.q || '').trim();
+    // Columns inferred from databases/anime_table.csv header
+    const cols = [
+      'anime_id','title','synopsis','type','source_type','num_episodes','status',
+      'start_date','end_date','season','score','score_count','score_rank'
+    ];
+
+    let sql = `SELECT ${cols.join(', ')} FROM anime_hub.anime`;
+    const params = [];
+    if (q) {
+      sql += ' WHERE title LIKE ? OR synopsis LIKE ?';
+      params.push(`%${q}%`, `%${q}%`);
+    }
+  // Order by non-null scores first (NULLS LAST), then by score desc, then title asc
+  sql += ' ORDER BY score IS NULL, score DESC, title ASC LIMIT 200';
+
+    const [rows] = await pool.query(sql, params);
+    res.json({ success: true, data: rows });
   } catch (error) {
     console.error('Database error:', error);
     res.status(500).json({ 
       success: false, 
-      message: 'Failed to fetch data',
+      message: 'Failed to fetch anime list',
       error: error.message 
     });
   }
@@ -39,6 +57,5 @@ app.get('/api/health', (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📊 API endpoints:`);
-  console.log(`   - GET http://localhost:${PORT}/api/health`);
-  console.log(`   - GET http://localhost:${PORT}/api/namelist`);
+  console.log(`   - GET http://localhost:${PORT}/api/anime`);
 });
