@@ -35,3 +35,24 @@ td { padding: 12px; color: #111827; vertical-align: top; }
 .empty-state-icon { font-size: 64px; margin-bottom: 20px; }
 .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
 .error h3 { margin-bottom: 10px; }
+
+/* Home title list */
+.title-list { list-style: none; margin-top: 10px; }
+.title-list li { padding: 10px 12px; border-bottom: 1px solid #e5e7eb; }
+.title-list li:hover { background: #f9fafb; }
+.title-link { color: #1f3b77; text-decoration: none; font-weight: 600; }
+.title-link:hover { text-decoration: underline; }
+
+/* Details page */
+.details h1 { margin-bottom: 12px; }
+.details-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.detail-item { background: #f8f9fa; padding: 12px 14px; border-radius: 8px; }
+.detail-item dt { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px; }
+.detail-item dd { font-size: 14px; color: #111827; }
+
+/* Synopsis occupies bottom portion */
+.details { display: flex; flex-direction: column; gap: 12px; min-height: calc(100vh - 140px); }
+.synopsis-panel { flex: 1; display: flex; flex-direction: column; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px; }
+.synopsis-panel h2 { font-size: 16px; margin-bottom: 8px; color: #333; }
+.synopsis-content { flex: 1; overflow: auto; line-height: 1.6; color: #111827; white-space: pre-wrap; }
+.back-link { margin-top: 8px; }

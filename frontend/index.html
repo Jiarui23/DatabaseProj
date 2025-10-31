@@ -5,7 +5,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<title>Anime Hub</title>
 	<link rel="stylesheet" href="styles.css" />
-	<script defer src="app.js"></script>
+	<script defer src="home.js"></script>
 	<!-- formerly index_clean.html -->
 	<!-- If you open this file directly, ensure server is running to load /api/anime -->
 	<!-- This UI intentionally omits the old 'Browse Anime' and 'Name List' labels -->
@@ -22,25 +22,15 @@
 
 	<div class="container">
 
+		<h1>Top Ranking Anime</h1>
 		<button class="refresh-btn" id="refreshBtn" type="button">🔄 Refresh Data</button>
 
-		<div id="stats" class="stats" style="display: none;">
-			<div class="stat-card">
-				<div class="stat-label">Total Records</div>
-				<div class="stat-value" id="recordCount">0</div>
-			</div>
-			<div class="stat-card">
-				<div class="stat-label">Columns</div>
-				<div class="stat-value" id="columnCount">0</div>
-			</div>
-		</div>
-
 		<div id="content">
-			<div class="loading">
-				<div class="spinner"></div>
-				<p>Loading data from database...</p>
+				<div class="loading">
+					<div class="spinner"></div>
+					<p>Loading titles...</p>
+				</div>
 			</div>
-		</div>
 	</div>
 </body>
 </html>
