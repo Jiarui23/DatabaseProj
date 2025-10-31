@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { pool } = require('./mysql_db');
+const reviewsRouter = require('./routes/reviews');
 
 const app = express();
 const PORT = 3000;
@@ -17,6 +18,9 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
+
+// Mount API routers
+app.use('/api', reviewsRouter);
 
 // API endpoint to get anime list data from anime_hub.anime
 app.get('/api/anime', async (req, res) => {
