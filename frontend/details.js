@@ -35,6 +35,40 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  async function loadGenresInline(animeId) {
+    const container = document.getElementById('genresInline');
+    if (!container) return;
+    try {
+      const res = await fetch(`/api/anime/${encodeURIComponent(animeId || id)}/genres`);
+      const result = await res.json();
+      if (!result.success) throw new Error(result.message || 'Failed to load genres');
+      const rows = Array.isArray(result.data) ? result.data : [];
+      if (rows.length === 0) {
+        container.innerHTML = '<em>—</em>';
+        return;
+      }
+      const names = rows
+        .map(g => String(g.name ?? g.genres ?? '').trim())
+        .filter(Boolean);
+      if (!names.length) {
+        container.innerHTML = '<em>—</em>';
+        return;
+      }
+      container.innerHTML = `
+        <span style="display:inline-flex; gap:8px; flex-wrap:wrap; align-items:center;">
+          ${names.map(n => `<span class="genre-badge">${escapeHtml(n)}</span>`).join(' ')}
+        </span>
+      `;
+    } catch (err) {
+      container.innerHTML = `
+        <div class="error">
+          <h3>❌ Error Loading Genres</h3>
+          <p>${escapeHtml(err.message)}</p>
+        </div>
+      `;
+    }
+  }
+
   function renderDetails(row) {
     const fields = [
       ['Title', row.title],
@@ -62,6 +96,9 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
           `).join('')}
         </dl>
+        <div class="genres-inline" style="margin:8px 0 0 0; color:#111827; font-size:14px;">
+          <strong>Genres:</strong> <span id="genresInline"><em>Loading genres...</em></span>
+        </div>
 
         <section class="synopsis-panel">
           <h2>Synopsis</h2>
@@ -73,6 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
 
     content.innerHTML = html;
+    loadGenresInline(row.anime_id);
   }
 
   function escapeHtml(unsafe) {

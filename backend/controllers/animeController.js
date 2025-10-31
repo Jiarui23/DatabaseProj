@@ -53,4 +53,25 @@ async function getAnimeById(req, res) {
   }
 }
 
-module.exports = { listAnime, getAnimeById };
+// exports are defined at the bottom to include all controller functions
+ 
+// GET /api/anime/:id/genres
+async function listGenresForAnime(req, res) {
+  try {
+    const id = req.params.id;
+    const sql = `
+      SELECT g.genre_id, g.name AS name
+      FROM anime_hub.anime_genre AS ag
+      INNER JOIN anime_hub.genre AS g ON g.genre_id = ag.genre_id
+      WHERE ag.anime_id = ?
+      ORDER BY g.name ASC
+    `;
+    const [rows] = await pool.query(sql, [id]);
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('Database error (listGenresForAnime):', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch genres', error: error.message });
+  }
+}
+
+module.exports = { listAnime, getAnimeById, listGenresForAnime };

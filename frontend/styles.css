@@ -56,3 +56,15 @@ td { padding: 12px; color: #111827; vertical-align: top; }
 .synopsis-panel h2 { font-size: 16px; margin-bottom: 8px; color: #333; }
 .synopsis-content { flex: 1; overflow: auto; line-height: 1.6; color: #111827; white-space: pre-wrap; }
 .back-link { margin-top: 8px; }
+
+/* Genre badges (inline chips) */
+.genre-badge {
+	display: inline-block;
+	background: #f1f3f5;
+	color: #111827;
+	padding: 6px 10px;
+	border-radius: 999px;
+	font-size: 13px;
+	border: 1px solid #e5e7eb;
+	line-height: 1;
+}

@@ -32,7 +32,7 @@ app.get('/api/health', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📊 API endpoints:`);
-  console.log(`   - GET http://localhost:${PORT}/api/anime`);
+  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`API endpoints:`);
+  console.log(`GET http://localhost:${PORT}/api/anime`);
 });
