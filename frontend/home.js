@@ -1,86 +1,71 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const API_URL = '';
-  const content = document.getElementById('content');
-  const searchInput = document.getElementById('searchInput');
-  const searchBtn = document.getElementById('searchBtn');
-  const refreshBtn = document.getElementById('refreshBtn');
-  const stats = document.getElementById('stats');
-  const recordCount = document.getElementById('recordCount');
-  const columnCount = document.getElementById('columnCount');
+// home.js
 
-  function setLoading(message = 'Loading data from database...') {
-    content.innerHTML = `
-      <div class="loading">
-        <div class="spinner"></div>
-        <p>${message}</p>
-      </div>
-    `;
-    if (stats) stats.style.display = 'none';
-  }
+const API_BASE = window.location.origin; // e.g. http://localhost:5000
 
-  async function loadList(query = '') {
-    setLoading('Loading titles...');
-    try {
-      const url = query ? `/api/anime?q=${encodeURIComponent(query)}` : '/api/anime';
-      const res = await fetch(url);
-      const result = await res.json();
-      if (!result.success) throw new Error(result.message || 'Failed to load data');
-      renderTitleList(result.data || []);
-    } catch (err) {
-      content.innerHTML = `
-        <div class="error">
-          <h3>❌ Error Loading Titles</h3>
-          <p>${err.message}</p>
-        </div>
-      `;
-    }
-  }
 
-  function renderTitleList(rows) {
-    // Update stats
-    if (recordCount) recordCount.textContent = rows.length;
-    if (columnCount) columnCount.textContent = 1;
-    if (stats) stats.style.display = 'flex';
+const $ = (s) => document.querySelector(s);
+const content = $("#content");
+const searchInput = $("#searchInput");
+const searchBtn = $("#searchBtn");
+const refreshBtn = $("#refreshBtn");
 
-    if (!rows.length) {
-      content.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-state-icon">📭</div>
-          <h2>No Results</h2>
-          <p>Try a different search.</p>
-        </div>
-      `;
+function rowHTML(a) {
+  const genres = (a.genres || []).join(", ");
+  const link = `details.html?id=${encodeURIComponent(a.anime_id)}`;
+  return `<li>
+    <a class="title-link" href="${link}">${a.title}</a>
+    <div style="color:#555;font-size:13px;">
+      ⭐ ${a.score ?? "NA"} • ${genres}
+    </div>
+  </li>`;
+}
+
+async function load({ q = "", genre = "", minScore = 0, page = 1, limit = 25 } = {}) {
+  content.innerHTML = `
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>Loading titles...</p>
+    </div>
+  `;
+  try {
+    const url = new URL("/api/anime", API_BASE);          // in home.js list call
+// and
+    if (q) url.searchParams.set("q", q);
+    if (genre) url.searchParams.set("genre", genre);
+    url.searchParams.set("minScore", String(minScore));
+    url.searchParams.set("page", String(page));
+    url.searchParams.set("limit", String(limit));
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+
+    if (!data.length) {
+      content.innerHTML = `<div class="empty-state">
+        <div class="empty-state-icon">😶‍🌫️</div>
+        <p>No anime found. Try another search.</p>
+      </div>`;
       return;
     }
 
-    // Create a simple list of titles with hover and click
-    const list = document.createElement('ul');
-    list.className = 'title-list';
-
-    rows.forEach(row => {
-      const li = document.createElement('li');
-      const a = document.createElement('a');
-      a.textContent = row.title || `Untitled #${row.anime_id}`;
-      a.href = `anime.html?id=${encodeURIComponent(row.anime_id)}`;
-      a.className = 'title-link';
-      li.appendChild(a);
-      list.appendChild(li);
-    });
-
-    content.innerHTML = '';
-    content.appendChild(list);
+    content.innerHTML = `
+      <ul class="title-list">
+        ${data.map(rowHTML).join("")}
+      </ul>
+    `;
+  } catch (e) {
+    content.innerHTML = `<div class="error">
+      <h3>Failed to load</h3>
+      <pre>${e.message}</pre>
+    </div>`;
   }
+}
 
-  function applySearch() {
-    const q = (searchInput.value || '').trim();
-    loadList(q);
-  }
-
-  // Wire events
-  if (searchBtn) searchBtn.addEventListener('click', applySearch);
-  if (searchInput) searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') applySearch(); });
-  if (refreshBtn) refreshBtn.addEventListener('click', () => loadList((searchInput.value || '').trim()));
-
-  // Initial load
-  loadList();
+searchBtn?.addEventListener("click", () => load({ q: searchInput.value.trim(), minScore: 0 }));
+searchInput?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") load({ q: searchInput.value.trim(), minScore: 0 });
 });
+refreshBtn?.addEventListener("click", () => load({ q: searchInput.value.trim(), minScore: 0 }));
+
+// first load
+load({ minScore: 8 });

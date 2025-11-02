@@ -1,38 +1,43 @@
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const { pool } = require('./mysql_db');
-const reviewsRouter = require('./routes/reviews');
-const animeRouter = require('./routes/anime');
+// backend/server.js
+import dotenv from "dotenv";
+dotenv.config();
+
+import express from "express";
+import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
+
+import animeMongoRoutes from "./routes/anime.mongo.routes.js";
+import { testConnection } from "./mysql_db.js";
 
 const app = express();
-const PORT = 3000;
-
-// Enable CORS and JSON parsing
 app.use(cors());
 app.use(express.json());
 
-// Serve static files from frontend directory
-app.use(express.static(path.join(__dirname, '../frontend')));
+// --- API routes first ---
+app.get("/health", async (_req, res) => {
+  try { res.json({ ok: true, mysql: await testConnection() }); }
+  catch (e) { res.status(500).json({ ok: false, error: String(e) }); }
+});
+app.use("/api/anime", animeMongoRoutes);
 
-// Serve the index page with external CSS/JS
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/index.html'));
+// --- Static frontend ---
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const FRONTEND_DIR = path.join(__dirname, "../frontend");
+
+// Serve everything in /frontend (js, css, images, html)
+app.use(express.static(FRONTEND_DIR, { extensions: ["html"] }));
+
+// Root → index.html
+app.get("/", (_req, res) => {
+  res.sendFile(path.join(FRONTEND_DIR, "index.html"));
 });
 
-// Mount API routers
-app.use('/api', reviewsRouter);
-app.use('/api', animeRouter);
-
-// (Anime endpoints moved to routes/anime.js)
-
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Server is running' });
+// (Optional) pretty path for /details/:id → details.html
+app.get("/details/:id", (_req, res) => {
+  res.sendFile(path.join(FRONTEND_DIR, "details.html"));
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`API endpoints:`);
-  console.log(`GET http://localhost:${PORT}/api/anime`);
-});
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`✅ All set: http://localhost:${PORT}`));

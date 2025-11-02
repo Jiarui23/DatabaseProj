@@ -1,126 +1,64 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const params = new URLSearchParams(window.location.search);
-  const id = params.get('id');
-  const content = document.getElementById('content');
+// details.js
+// use same origin; no CORS/config needed
+const API_BASE = window.location.origin; // e.g. http://localhost:5000
 
-  if (!id) {
-    content.innerHTML = `
-      <div class="error">
-        <h3>❌ Missing ID</h3>
-        <p>No anime id provided in the URL.</p>
-      </div>
-    `;
-    return;
-  }
+const url = new URL(`/api/anime/${animeId}`, API_BASE); // in details.js
+const params = new URLSearchParams(location.search);
+const animeId = Number(params.get("id"));
+const content = document.getElementById("content");
 
-  async function loadDetails() {
-    content.innerHTML = `
-      <div class="loading">
-        <div class="spinner"></div>
-        <p>Loading anime details...</p>
-      </div>
-    `;
-    try {
-      const res = await fetch(`/api/anime/${encodeURIComponent(id)}`);
-      const result = await res.json();
-      if (!result.success) throw new Error(result.message || 'Failed to load');
-      renderDetails(result.data);
-    } catch (err) {
-      content.innerHTML = `
-        <div class="error">
-          <h3>❌ Error Loading Details</h3>
-          <p>${err.message}</p>
-        </div>
-      `;
+if (!animeId) {
+  content.innerHTML = `<div class="error"><h3>Missing anime id</h3></div>`;
+} else {
+  render();
+}
+
+async function render() {
+  content.innerHTML = `
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>Loading anime details...</p>
+    </div>
+  `;
+  try {
+    const res = await fetch(`${API_BASE}/api/anime/${animeId}`);
+    if (!res.ok) throw new Error(await res.text());
+    const a = await res.json();
+    if (!a || !a.title) {
+      content.innerHTML = `<div class="empty-state"><p>Anime not found.</p></div>`;
+      return;
     }
-  }
 
-  async function loadGenresInline(animeId) {
-    const container = document.getElementById('genresInline');
-    if (!container) return;
-    try {
-      const res = await fetch(`/api/anime/${encodeURIComponent(animeId || id)}/genres`);
-      const result = await res.json();
-      if (!result.success) throw new Error(result.message || 'Failed to load genres');
-      const rows = Array.isArray(result.data) ? result.data : [];
-      if (rows.length === 0) {
-        container.innerHTML = '<em>—</em>';
-        return;
-      }
-      const names = rows
-        .map(g => String(g.name ?? g.genres ?? '').trim())
-        .filter(Boolean);
-      if (!names.length) {
-        container.innerHTML = '<em>—</em>';
-        return;
-      }
-      container.innerHTML = `
-        <span style="display:inline-flex; gap:8px; flex-wrap:wrap; align-items:center;">
-          ${names.map(n => `<span class="genre-badge">${escapeHtml(n)}</span>`).join(' ')}
-        </span>
-      `;
-    } catch (err) {
-      container.innerHTML = `
-        <div class="error">
-          <h3>❌ Error Loading Genres</h3>
-          <p>${escapeHtml(err.message)}</p>
-        </div>
-      `;
-    }
-  }
+    const genres = (a.genres || []).map(g => `<span class="genre-badge">${g}</span>`).join(" ");
+    const studios = (a.studios || []).join(", ");
+    const img = (a.images && a.images[0]) ? `<img src="${a.images[0]}" alt="${a.title}" style="max-width:260px;border-radius:8px;border:1px solid #e5e7eb;" />` : "";
 
-  function renderDetails(row) {
-    const fields = [
-      ['Title', row.title],
-      ['Type', row.type],
-      ['Source', row.source_type],
-      ['Episodes', row.num_episodes],
-      ['Status', row.status],
-      ['Season', row.season],
-      ['Start Date', row.start_date],
-      ['End Date', row.end_date],
-      ['Score', row.score],
-      ['Rank', row.score_rank]
-    ];
-
-    const synopsis = row.synopsis == null || row.synopsis === '' ? '<em>—</em>' : escapeHtml(String(row.synopsis));
-
-    const html = `
+    content.innerHTML = `
       <div class="details">
-        <h1>${row.title || 'Untitled'}</h1>
-        <dl class="details-grid">
-          ${fields.map(([label, value]) => `
-            <div class="detail-item">
-              <dt>${label}</dt>
-              <dd>${value == null || value === '' ? '<em>—</em>' : escapeHtml(String(value))}</dd>
-            </div>
-          `).join('')}
-        </dl>
-        <div class="genres-inline" style="margin:8px 0 0 0; color:#111827; font-size:14px;">
-          <strong>Genres:</strong> <span id="genresInline"><em>Loading genres...</em></span>
+        <a class="back-link" href="index.html">← Back</a>
+        <h1>${a.title}</h1>
+
+        <div class="details-grid">
+          <div class="detail-item"><dt>Score</dt><dd>${a.score ?? "NA"}</dd></div>
+          <div class="detail-item"><dt>Episodes</dt><dd>${a.episodes ?? "?"}</dd></div>
+          <div class="detail-item"><dt>Type</dt><dd>${a.type ?? "—"}</dd></div>
+          <div class="detail-item"><dt>Members</dt><dd>${a.members ?? "—"}</dd></div>
+          <div class="detail-item"><dt>Studios</dt><dd>${studios || "—"}</dd></div>
+          <div class="detail-item"><dt>Genres</dt><dd>${genres || "—"}</dd></div>
         </div>
 
-        <section class="synopsis-panel">
+        <div class="synopsis-panel">
           <h2>Synopsis</h2>
-          <div class="synopsis-content">${synopsis}</div>
-        </section>
+          <div class="synopsis-content">${a.synopsis ?? "No synopsis available."}</div>
+        </div>
 
-        <p class="back-link"><a href="/">← Back to list</a></p>
+        <div>${img}</div>
       </div>
     `;
 
-    content.innerHTML = html;
-    loadGenresInline(row.anime_id);
+    // expose id for reviews.js
+    window.__ANIME_ID__ = animeId;
+  } catch (e) {
+    content.innerHTML = `<div class="error"><h3>Failed to load</h3><pre>${e.message}</pre></div>`;
   }
-
-  function escapeHtml(unsafe) {
-    return unsafe
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
-
-  loadDetails();
-});
+}
