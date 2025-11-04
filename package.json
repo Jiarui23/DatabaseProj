@@ -4,8 +4,6 @@
   "description": "Backend for DatabaseProj with MySQL connection to AWS RDS",
   "main": "backend/mysql_db.js",
   "scripts": {
-    "sync": "node backend/scripts/sync_to_mongo.js",
-    "dev": "nodemon backend/server.js",
     "start": "node backend/server.js",
     "test-connection": "node backend/testConnection.js"
   },
@@ -18,9 +16,8 @@
   "license": "ISC",
   "dependencies": {
     "cors": "^2.8.5",
-    "dotenv": "^16.6.1",
+    "dotenv": "^16.3.1",
     "express": "^5.1.0",
-    "mongodb": "^6.20.0",
     "mysql2": "^3.6.0"
   }
 }
