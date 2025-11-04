@@ -93,8 +93,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (searchInput) searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') applySearch(); });
   if (refreshBtn) refreshBtn.addEventListener('click', () => loadList((searchInput.value || '').trim()));
 
-  // Initial load
-  loadList();
+  // Initial load - only on home page (where refreshBtn exists)
+  if (refreshBtn) {
+    loadList();
+  }
 
   // Auth UI functions
   function updateAuthUI() {
@@ -182,26 +184,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function fetchAutocomplete(query) {
     try {
-      console.log('[Frontend] Fetching autocomplete for:', query);
       autocompleteDropdown.innerHTML = '<div class="autocomplete-loading">Searching...</div>';
       autocompleteDropdown.classList.add('show');
 
       const url = `/api/anime/autocomplete?q=${encodeURIComponent(query)}`;
-      console.log('[Frontend] Fetch URL:', url);
       const res = await fetch(url);
-      console.log('[Frontend] Response status:', res.status);
       const result = await res.json();
-      console.log('[Frontend] Response data:', result);
 
       if (result.success && result.data.length > 0) {
-        console.log('[Frontend] Rendering', result.data.length, 'results');
         renderAutocomplete(result.data);
       } else {
-        console.log('[Frontend] No results found');
         autocompleteDropdown.innerHTML = '<div class="autocomplete-empty">No anime found</div>';
       }
     } catch (error) {
-      console.error('[Frontend] Autocomplete error:', error);
+      console.error('Autocomplete error:', error);
       autocompleteDropdown.innerHTML = '<div class="autocomplete-empty">Error loading suggestions</div>';
     }
   }

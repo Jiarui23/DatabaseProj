@@ -5,6 +5,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<title>Anime Hub</title>
 	<link rel="stylesheet" href="styles.css" />
+	<script src="navbar.js"></script>
 	<script defer src="home.js"></script>
 	<!-- formerly index_clean.html -->
 	<!-- If you open this file directly, ensure server is running to load /api/anime -->
@@ -12,18 +13,6 @@
   
 </head>
 <body>
-	<div class="navbar">
-		<a class="brand" href="/">Anime Hub</a>
-		<div class="search">
-			<div class="autocomplete-container">
-				<input id="searchInput" type="text" placeholder="Search anime..." autocomplete="off" />
-				<div id="autocompleteDropdown" class="autocomplete-dropdown"></div>
-			</div>
-			<button id="searchBtn" type="button">Search</button>
-		</div>
-		<div id="authSection"></div>
-	</div>
-
 	<div class="container">
 
 		<h1>Top Ranking Anime</h1>
