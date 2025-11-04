@@ -15,7 +15,10 @@
 	<div class="navbar">
 		<a class="brand" href="/">Anime Hub</a>
 		<div class="search">
-			<input id="searchInput" type="text" placeholder="Search anime..." />
+			<div class="autocomplete-container">
+				<input id="searchInput" type="text" placeholder="Search anime..." autocomplete="off" />
+				<div id="autocompleteDropdown" class="autocomplete-dropdown"></div>
+			</div>
 			<button id="searchBtn" type="button">Search</button>
 		</div>
 		<div id="authSection"></div>

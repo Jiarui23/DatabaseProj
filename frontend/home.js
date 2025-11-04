@@ -8,9 +8,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const recordCount = document.getElementById('recordCount');
   const columnCount = document.getElementById('columnCount');
   const authSection = document.getElementById('authSection');
+  const autocompleteDropdown = document.getElementById('autocompleteDropdown');
+
+  let autocompleteTimeout = null;
 
   // Initialize auth UI
   updateAuthUI();
+  
+  // Setup autocomplete
+  if (autocompleteDropdown) {
+    setupAutocomplete();
+  }
 
   function setLoading(message = 'Loading data from database...') {
     content.innerHTML = `
@@ -127,5 +135,125 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+
+  // Autocomplete functionality
+  function setupAutocomplete() {
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.trim();
+      
+      // Clear previous timeout
+      if (autocompleteTimeout) {
+        clearTimeout(autocompleteTimeout);
+      }
+      
+      // Hide dropdown if query is too short
+      if (query.length < 2) {
+        autocompleteDropdown.classList.remove('show');
+        return;
+      }
+      
+      // Debounce: wait 300ms after user stops typing
+      autocompleteTimeout = setTimeout(() => {
+        fetchAutocomplete(query);
+      }, 300);
+    });
+
+    // Hide dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!searchInput.contains(e.target) && !autocompleteDropdown.contains(e.target)) {
+        autocompleteDropdown.classList.remove('show');
+      }
+    });
+
+    // Handle enter key to select first item or search
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const firstItem = autocompleteDropdown.querySelector('.autocomplete-item');
+        if (firstItem && autocompleteDropdown.classList.contains('show')) {
+          e.preventDefault();
+          firstItem.click();
+        }
+      } else if (e.key === 'Escape') {
+        autocompleteDropdown.classList.remove('show');
+      }
+    });
+  }
+
+  async function fetchAutocomplete(query) {
+    try {
+      console.log('[Frontend] Fetching autocomplete for:', query);
+      autocompleteDropdown.innerHTML = '<div class="autocomplete-loading">Searching...</div>';
+      autocompleteDropdown.classList.add('show');
+
+      const url = `/api/anime/autocomplete?q=${encodeURIComponent(query)}`;
+      console.log('[Frontend] Fetch URL:', url);
+      const res = await fetch(url);
+      console.log('[Frontend] Response status:', res.status);
+      const result = await res.json();
+      console.log('[Frontend] Response data:', result);
+
+      if (result.success && result.data.length > 0) {
+        console.log('[Frontend] Rendering', result.data.length, 'results');
+        renderAutocomplete(result.data);
+      } else {
+        console.log('[Frontend] No results found');
+        autocompleteDropdown.innerHTML = '<div class="autocomplete-empty">No anime found</div>';
+      }
+    } catch (error) {
+      console.error('[Frontend] Autocomplete error:', error);
+      autocompleteDropdown.innerHTML = '<div class="autocomplete-empty">Error loading suggestions</div>';
+    }
+  }
+
+  function renderAutocomplete(items) {
+    autocompleteDropdown.innerHTML = '';
+    
+    items.forEach((item, index) => {
+      const div = document.createElement('div');
+      div.className = 'autocomplete-item';
+      
+      const title = document.createElement('div');
+      title.className = 'autocomplete-title';
+      title.textContent = item.title || 'Untitled';
+      
+      // Show ranking info if available
+      if (item.score_rank || item.score) {
+        const meta = document.createElement('div');
+        meta.className = 'autocomplete-meta';
+        
+        if (item.score_rank) {
+          const rank = document.createElement('span');
+          rank.className = 'autocomplete-rank';
+          rank.textContent = `Rank #${item.score_rank}`;
+          meta.appendChild(rank);
+        }
+        
+        if (item.score) {
+          const score = document.createElement('span');
+          score.className = 'autocomplete-score';
+          score.textContent = `⭐ ${item.score}`;
+          meta.appendChild(score);
+        }
+        
+        div.appendChild(title);
+        div.appendChild(meta);
+      } else {
+        div.appendChild(title);
+      }
+      
+      div.addEventListener('click', () => {
+        window.location.href = `anime.html?id=${encodeURIComponent(item.anime_id)}`;
+      });
+      
+      // Highlight first item
+      if (index === 0) {
+        div.style.background = '#f9fafb';
+      }
+      
+      autocompleteDropdown.appendChild(div);
+    });
+    
+    autocompleteDropdown.classList.add('show');
   }
 });

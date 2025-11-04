@@ -5,6 +5,7 @@ const { pool } = require('./mysql_db');
 const reviewsRouter = require('./routes/reviews');
 const animeRouter = require('./routes/anime');
 const authRouter = require('./routes/auth');
+const autocompleteRouter = require('./routes/autocomplete');
 
 const app = express();
 const PORT = 3000;
@@ -22,6 +23,8 @@ app.get('/', (req, res) => {
 });
 
 // Mount API routers
+// IMPORTANT: Mount autocomplete BEFORE anime router to avoid :id catching 'autocomplete'
+app.use('/api', autocompleteRouter);
 app.use('/api', reviewsRouter);
 app.use('/api', animeRouter);
 app.use('/api', authRouter);
