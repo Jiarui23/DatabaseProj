@@ -7,6 +7,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const stats = document.getElementById('stats');
   const recordCount = document.getElementById('recordCount');
   const columnCount = document.getElementById('columnCount');
+  const authSection = document.getElementById('authSection');
+
+  // Initialize auth UI
+  updateAuthUI();
 
   function setLoading(message = 'Loading data from database...') {
     content.innerHTML = `
@@ -83,4 +87,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initial load
   loadList();
+
+  // Auth UI functions
+  function updateAuthUI() {
+    const currentUser = localStorage.getItem('currentUser');
+    
+    if (currentUser) {
+      authSection.innerHTML = `
+        <div class="user-menu">
+          <span class="user-name">👤 ${escapeHtml(currentUser)}</span>
+          <button class="logout-btn" id="logoutBtn">Logout</button>
+        </div>
+      `;
+      
+      const logoutBtn = document.getElementById('logoutBtn');
+      logoutBtn.addEventListener('click', handleLogout);
+    } else {
+      authSection.innerHTML = `
+        <div class="auth-links">
+          <a href="login.html">Login</a>
+          <a href="register.html">Register</a>
+        </div>
+      `;
+    }
+  }
+
+  function handleLogout() {
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('isAdmin');
+    updateAuthUI();
+    alert('You have been logged out successfully');
+  }
+
+  function escapeHtml(unsafe) {
+    return String(unsafe)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
 });

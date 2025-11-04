@@ -2,6 +2,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const params = new URLSearchParams(window.location.search);
   const id = params.get('id');
   const content = document.getElementById('content');
+  const authSection = document.getElementById('authSection');
+
+  // Initialize auth UI
+  updateAuthUI();
 
   if (!id) {
     content.innerHTML = `
@@ -120,6 +124,38 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+
+  // Auth UI functions
+  function updateAuthUI() {
+    const currentUser = localStorage.getItem('currentUser');
+    
+    if (currentUser) {
+      authSection.innerHTML = `
+        <div class="user-menu">
+          <span class="user-name">👤 ${escapeHtml(currentUser)}</span>
+          <button class="logout-btn" id="logoutBtn">Logout</button>
+        </div>
+      `;
+      
+      const logoutBtn = document.getElementById('logoutBtn');
+      logoutBtn.addEventListener('click', handleLogout);
+    } else {
+      authSection.innerHTML = `
+        <div class="auth-links">
+          <a href="login.html">Login</a>
+          <a href="register.html">Register</a>
+        </div>
+      `;
+    }
+  }
+
+  function handleLogout() {
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('isAdmin');
+    updateAuthUI();
+    alert('You have been logged out successfully');
   }
 
   loadDetails();

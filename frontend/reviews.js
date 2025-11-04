@@ -56,6 +56,9 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    const currentUser = localStorage.getItem('currentUser');
+    const isAdmin = localStorage.getItem('isAdmin') === 'true';
+
     const list = document.createElement('div');
     list.className = 'reviews-list';
 
@@ -72,24 +75,42 @@ document.addEventListener('DOMContentLoaded', () => {
         + (row.score != null && row.score !== '' ? ` • <span title="Score">⭐ ${escapeHtml(String(row.score))}</span>` : '')
         + (row.postDate || row.postTime ? ` • <span style="color:#666;">${escapeHtml([row.postDate, row.postTime].filter(Boolean).join(' '))}</span>` : '');
 
-      const delBtn = document.createElement('button');
-      delBtn.textContent = 'Delete';
-      delBtn.className = 'refresh-btn';
-      delBtn.style.cssText = 'padding:6px 10px; font-size:12px;';
-      delBtn.addEventListener('click', async () => {
-        if (!confirm('Delete this review?')) return;
-        try {
-          const res = await fetch(`/api/reviews/${encodeURIComponent(row.id)}`, { method: 'DELETE' });
-          const result = await res.json();
-          if (!result.success) throw new Error(result.message || 'Failed to delete');
-          await loadReviews();
-        } catch (err) {
-          alert('Delete failed: ' + err.message);
-        }
-      });
-
       header.appendChild(left);
-      header.appendChild(delBtn);
+
+      // Show delete button only if:
+      // 1. User is admin (can delete any review)
+      // 2. User is the review owner (can delete their own review)
+      const canDelete = isAdmin || (currentUser && currentUser === row.user);
+      
+      if (canDelete) {
+        const delBtn = document.createElement('button');
+        delBtn.textContent = 'Delete';
+        delBtn.className = 'refresh-btn';
+        delBtn.style.cssText = 'padding:6px 10px; font-size:12px;';
+        delBtn.addEventListener('click', async () => {
+          if (!confirm('Delete this review?')) return;
+          try {
+            const userId = localStorage.getItem('userId');
+            const res = await fetch(`/api/reviews/${encodeURIComponent(row.id)}`, { 
+              method: 'DELETE',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                userId: userId,
+                isAdmin: isAdmin,
+                username: currentUser
+              })
+            });
+            const result = await res.json();
+            if (!result.success) throw new Error(result.message || 'Failed to delete');
+            await loadReviews();
+          } catch (err) {
+            alert('Delete failed: ' + err.message);
+          }
+        });
+        header.appendChild(delBtn);
+      }
 
       const body = document.createElement('div');
       body.className = 'review-body';
@@ -123,7 +144,10 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       formMsg.textContent = '';
-      const user = (inputUser.value || '').trim();
+      
+      // Get current user from localStorage
+      const currentUser = localStorage.getItem('currentUser');
+      const user = currentUser || (inputUser.value || '').trim();
       const scoreVal = (inputScore.value || '').trim();
       const review = (inputText.value || '').trim();
 
@@ -149,12 +173,29 @@ document.addEventListener('DOMContentLoaded', () => {
         // Reset form and reload
         form.reset();
         formMsg.textContent = 'Review submitted!';
+        
+        // If logged in, clear the user input field
+        if (currentUser && inputUser) {
+          inputUser.style.display = 'none';
+        }
+        
         await loadReviews();
         setTimeout(() => { formMsg.textContent = ''; }, 1500);
       } catch (err) {
         formMsg.textContent = 'Error: ' + err.message;
       }
     });
+    
+    // Hide username input if user is logged in
+    const currentUser = localStorage.getItem('currentUser');
+    if (currentUser && inputUser) {
+      inputUser.value = currentUser;
+      inputUser.style.display = 'none';
+      const userLabel = inputUser.previousElementSibling;
+      if (userLabel && userLabel.tagName === 'LABEL') {
+        userLabel.style.display = 'none';
+      }
+    }
   }
 
   loadReviews();

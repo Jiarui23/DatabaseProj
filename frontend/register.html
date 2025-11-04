@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register - Anime Hub</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script defer src="register.js"></script>
+</head>
+<body>
+  <div class="navbar">
+    <a class="brand" href="/">Anime Hub</a>
+  </div>
+
+  <div class="login-container">
+    <div class="login-card">
+      <h1>Create Account</h1>
+      <p class="login-subtitle">Join Anime Hub today</p>
+
+      <form id="registerForm" class="login-form">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input 
+            type="text" 
+            id="username" 
+            name="username" 
+            placeholder="Choose a username" 
+            required 
+            minlength="3"
+            maxlength="30"
+            autocomplete="username"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input 
+            type="password" 
+            id="password" 
+            name="password" 
+            placeholder="Choose a password" 
+            required 
+            minlength="6"
+            autocomplete="new-password"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="confirmPassword">Confirm Password</label>
+          <input 
+            type="password" 
+            id="confirmPassword" 
+            name="confirmPassword" 
+            placeholder="Confirm your password" 
+            required 
+            minlength="6"
+            autocomplete="new-password"
+          />
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="login-btn">Create Account</button>
+        </div>
+
+        <div id="registerMessage" class="message"></div>
+      </form>
+
+      <div class="login-footer">
+        <p>Already have an account? <a href="login.html">Sign in</a></p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

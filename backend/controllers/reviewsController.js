@@ -84,14 +84,46 @@ async function createReview(req, res) {
 }
 
 // DELETE /api/reviews/:id
+// Body should include: { userId, isAdmin, username }
 async function deleteReview(req, res) {
   try {
-    const id = req.params.id;
-    const delSql = 'DELETE FROM anime_hub.\`review\` WHERE id = ?';
-    const [result] = await pool.query(delSql, [id]);
+    const reviewId = req.params.id;
+    const { userId, isAdmin, username } = req.body;
+
+    // Check if user is logged in
+    if (!userId || !username) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'You must be logged in to delete reviews' 
+      });
+    }
+
+    // Get the review to check ownership
+    const getReviewSql = 'SELECT id, username FROM anime_hub.`review` WHERE id = ?';
+    const [reviews] = await pool.query(getReviewSql, [reviewId]);
+
+    if (reviews.length === 0) {
+      return res.status(404).json({ success: false, message: 'Review not found' });
+    }
+
+    const review = reviews[0];
+
+    // Check permissions: either admin or the review owner
+    if (!isAdmin && review.username !== username) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'You can only delete your own reviews' 
+      });
+    }
+
+    // Delete the review
+    const delSql = 'DELETE FROM anime_hub.`review` WHERE id = ?';
+    const [result] = await pool.query(delSql, [reviewId]);
+    
     if (result.affectedRows === 0) {
       return res.status(404).json({ success: false, message: 'Review not found' });
     }
+    
     res.json({ success: true, message: 'Review deleted' });
   } catch (error) {
     console.error('deleteReview error:', error);
