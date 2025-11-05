@@ -1,4 +1,5 @@
 const { pool } = require('../mysql_db');
+const { logAction } = require('./logsController');
 
 // Helpers
 function sanitizeUser(input) {
@@ -76,6 +77,13 @@ async function createReview(req, res) {
        LIMIT 1`;
     const [rows] = await pool.query(selectSql, [id]);
 
+    // Log review creation
+    logAction(null, username, 'add_review', { 
+      animeId, 
+      reviewId: id,
+      score 
+    });
+
     res.status(201).json({ success: true, data: rows[0] });
   } catch (error) {
     console.error('createReview error:', error);
@@ -123,6 +131,12 @@ async function deleteReview(req, res) {
     if (result.affectedRows === 0) {
       return res.status(404).json({ success: false, message: 'Review not found' });
     }
+    
+    // Log review deletion
+    logAction(userId, username, 'delete_review', { 
+      reviewId,
+      isAdmin 
+    });
     
     res.json({ success: true, message: 'Review deleted' });
   } catch (error) {

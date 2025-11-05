@@ -1,11 +1,15 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { pool } = require('./mysql_db');
+const { connectMongoDB } = require('./mongodb_db');
 const reviewsRouter = require('./routes/reviews');
 const animeRouter = require('./routes/anime');
 const authRouter = require('./routes/auth');
 const autocompleteRouter = require('./routes/autocomplete');
+const logsRouter = require('./routes/logs');
+const cacheRouter = require('./routes/cache');
 
 const app = express();
 const PORT = 3000;
@@ -28,6 +32,8 @@ app.use('/api', autocompleteRouter);
 app.use('/api', reviewsRouter);
 app.use('/api', animeRouter);
 app.use('/api', authRouter);
+app.use('/api', logsRouter);
+app.use('/api', cacheRouter);
 
 // (Anime endpoints moved to routes/anime.js)
 
@@ -36,8 +42,16 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Server is running' });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`API endpoints:`);
   console.log(`GET http://localhost:${PORT}/api/anime`);
+  
+  // Connect to MongoDB for logs and caching
+  try {
+    await connectMongoDB();
+  } catch (error) {
+    console.error('Failed to connect to MongoDB:', error.message);
+    console.log('Server will continue without MongoDB (MySQL still works)');
+  }
 });

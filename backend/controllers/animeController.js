@@ -1,9 +1,28 @@
 const { pool } = require('../mysql_db');
+const { logAction } = require('./logsController');
+const { getCachedSearch, cacheSearchResults, getCachedAnime, cacheAnimeData } = require('./cacheController');
 
-// GET /api/anime?q=...
+// GET /api/anime?q=...&userId=...&username=...
 async function listAnime(req, res) {
   try {
     const q = (req.query.q || '').trim();
+    const userId = req.query.userId || null;
+    const username = req.query.username || 'anonymous';
+    
+    // Check cache for search results (if query exists)
+    if (q) {
+      const cachedResults = await getCachedSearch(q);
+      if (cachedResults) {
+        // Log search action
+        logAction(userId, username, 'search', { 
+          query: q, 
+          resultsCount: cachedResults.length,
+          fromCache: true 
+        });
+        return res.json({ success: true, data: cachedResults, cached: true });
+      }
+    }
+    
     const cols = ['a.anime_id', 'a.title', 'a.score'];
 
     let sql = `SELECT DISTINCT ${cols.join(', ')} FROM anime_hub.anime a`;
@@ -35,6 +54,16 @@ async function listAnime(req, res) {
       score: row.score
     }));
     
+    // Cache search results (if query exists) - 30 minutes TTL
+    if (q) {
+      await cacheSearchResults(q, formattedRows, 30);
+      logAction(userId, username, 'search', { 
+        query: q, 
+        resultsCount: formattedRows.length,
+        fromCache: false 
+      });
+    }
+    
     res.json({ success: true, data: formattedRows });
   } catch (error) {
     console.error('Database error (listAnime):', error);
@@ -42,10 +71,25 @@ async function listAnime(req, res) {
   }
 }
 
-// GET /api/anime/:id
+// GET /api/anime/:id?userId=...&username=...
 async function getAnimeById(req, res) {
   try {
     const id = req.params.id;
+    const userId = req.query.userId || null;
+    const username = req.query.username || 'anonymous';
+    
+    // Check cache first
+    const cachedData = await getCachedAnime(id);
+    if (cachedData) {
+      // Log anime view action
+      logAction(userId, username, 'view_anime', { 
+        animeId: id, 
+        animeTitle: cachedData.title,
+        fromCache: true
+      });
+      return res.json({ success: true, data: cachedData, cached: true });
+    }
+    
     const cols = [
       'anime_id',
       'title',
@@ -66,6 +110,17 @@ async function getAnimeById(req, res) {
     if (!rows || rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Anime not found' });
     }
+    
+    // Cache anime data - 60 minutes TTL
+    await cacheAnimeData(id, rows[0], 60);
+    
+    // Log anime view action
+    logAction(userId, username, 'view_anime', { 
+      animeId: id, 
+      animeTitle: rows[0].title,
+      fromCache: false
+    });
+    
     res.json({ success: true, data: rows[0] });
   } catch (error) {
     console.error('Database error (getAnimeById):', error);

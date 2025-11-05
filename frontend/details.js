@@ -25,7 +25,17 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     `;
     try {
-      const res = await fetch(`/api/anime/${encodeURIComponent(id)}`);
+      // Get user info from localStorage
+      const userId = localStorage.getItem('userId');
+      const username = localStorage.getItem('currentUser');
+      
+      // Build URL with user info
+      let url = `/api/anime/${encodeURIComponent(id)}`;
+      if (userId && username) {
+        url += `?userId=${userId}&username=${encodeURIComponent(username)}`;
+      }
+      
+      const res = await fetch(url);
       const result = await res.json();
       if (!result.success) throw new Error(result.message || 'Failed to load');
       renderDetails(result.data);

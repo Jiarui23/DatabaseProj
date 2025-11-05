@@ -1,5 +1,6 @@
 const { pool } = require('../mysql_db');
 const crypto = require('crypto');
+const { logAction } = require('./logsController');
 
 // Hash password using SHA-256
 function hashPassword(password) {
@@ -53,6 +54,9 @@ async function register(req, res) {
       VALUES (?, ?, 0)
     `;
     const [result] = await pool.query(insertSql, [username, hashedPassword]);
+
+    // Log registration
+    logAction(result.insertId, username, 'register', { timestamp: new Date() });
 
     res.status(201).json({
       success: true,
@@ -115,6 +119,12 @@ async function login(req, res) {
         message: 'Invalid username or password' 
       });
     }
+
+    // Log successful login
+    logAction(user.id, user.username, 'login', { 
+      timestamp: new Date(),
+      isAdmin: user.is_admin === 1 || user.is_admin === true
+    });
 
     res.json({
       success: true,

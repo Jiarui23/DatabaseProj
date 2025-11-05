@@ -33,7 +33,16 @@ document.addEventListener('DOMContentLoaded', () => {
   async function loadList(query = '') {
     setLoading('Loading titles...');
     try {
-      const url = query ? `/api/anime?q=${encodeURIComponent(query)}` : '/api/anime';
+      // Get user info from localStorage
+      const userId = localStorage.getItem('userId');
+      const username = localStorage.getItem('currentUser');
+      
+      // Build URL with user info
+      let url = query ? `/api/anime?q=${encodeURIComponent(query)}` : '/api/anime';
+      if (userId && username) {
+        url += (query ? '&' : '?') + `userId=${userId}&username=${encodeURIComponent(username)}`;
+      }
+      
       const res = await fetch(url);
       const result = await res.json();
       if (!result.success) throw new Error(result.message || 'Failed to load data');
