@@ -2,7 +2,12 @@
 function loadNavbar() {
   const navbarHTML = `
     <div class="navbar">
-      <a class="brand" href="/">Anime Hub</a>
+      <div class="brand-container">
+        <a href="/">
+          <img src="logo.jpeg" alt="Anime Hub Logo" class="logo" />
+        </a>
+        <a class="brand" href="/">Anime Hub</a>
+      </div>
       <div class="search">
         <div class="autocomplete-container">
           <input id="searchInput" type="text" placeholder="Search anime..." autocomplete="off" />
