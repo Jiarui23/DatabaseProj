@@ -65,6 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
     rows.forEach(row => {
       const item = document.createElement('div');
       item.className = 'review-item';
+      item.id = `review-${row.id}`;
       item.style.cssText = 'border:1px solid #e5e7eb; border-radius:8px; padding:12px; margin-bottom:10px; background:#fff;';
 
       const header = document.createElement('div');
@@ -77,16 +78,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
       header.appendChild(left);
 
-      // Show delete button only if:
-      // 1. User is admin (can delete any review)
-      // 2. User is the review owner (can delete their own review)
-      const canDelete = isAdmin || (currentUser && currentUser === row.user);
-      
+      const buttonContainer = document.createElement('div');
+      buttonContainer.style.cssText = 'display:flex; gap:8px;';
+
+      // Show edit button only for review owner (not admin)
+      const isOwner = currentUser && currentUser === row.user;
+      if (isOwner) {
+        const editBtn = document.createElement('button');
+        editBtn.textContent = 'Edit';
+        editBtn.className = 'edit-btn';
+        editBtn.style.cssText = 'padding:6px 10px; font-size:12px; background:#667eea; color:white; border:none; border-radius:6px; cursor:pointer;';
+        editBtn.addEventListener('click', () => enableEditMode(row, item));
+        buttonContainer.appendChild(editBtn);
+      }
+
+      // Show delete button for admin or owner
+      const canDelete = isAdmin || isOwner;
       if (canDelete) {
         const delBtn = document.createElement('button');
         delBtn.textContent = 'Delete';
-        delBtn.className = 'refresh-btn';
-        delBtn.style.cssText = 'padding:6px 10px; font-size:12px;';
+        delBtn.className = 'delete-btn';
+        delBtn.style.cssText = 'padding:6px 10px; font-size:12px; background:#f56565; color:white; border:none; border-radius:6px; cursor:pointer;';
         delBtn.addEventListener('click', async () => {
           if (!confirm('Delete this review?')) return;
           try {
@@ -109,17 +121,20 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Delete failed: ' + err.message);
           }
         });
-        header.appendChild(delBtn);
+        buttonContainer.appendChild(delBtn);
+      }
+
+      if (buttonContainer.children.length > 0) {
+        header.appendChild(buttonContainer);
       }
 
       const body = document.createElement('div');
       body.className = 'review-body';
-      // Use pre-line so we preserve line breaks but collapse long space runs.
       body.style.cssText = 'white-space:pre-line; line-height:1.5; color:#111827;';
       const normalized = String(row.review || '')
-        .replace(/\r\n/g, '\n')        // normalize CRLF to LF
-        .replace(/[ \t]{2,}/g, ' ')     // collapse 2+ spaces/tabs
-        .replace(/\n{3,}/g, '\n\n');  // collapse 3+ blank lines to max 2
+        .replace(/\r\n/g, '\n')
+        .replace(/[ \t]{2,}/g, ' ')
+        .replace(/\n{3,}/g, '\n\n');
       body.textContent = normalized;
 
       item.appendChild(header);
@@ -129,6 +144,126 @@ document.addEventListener('DOMContentLoaded', () => {
 
     reviewsList.innerHTML = '';
     reviewsList.appendChild(list);
+  }
+
+  function enableEditMode(reviewData, itemElement) {
+    const body = itemElement.querySelector('.review-body');
+    const header = itemElement.querySelector('div');
+    
+    // Store original content
+    const originalText = body.textContent;
+    const originalScore = reviewData.score;
+
+    // Create edit form
+    const editForm = document.createElement('div');
+    editForm.style.cssText = 'margin-top:10px;';
+
+    const scoreLabel = document.createElement('label');
+    scoreLabel.textContent = 'Score (0-10): ';
+    scoreLabel.style.cssText = 'display:block; margin-bottom:4px; font-size:13px;';
+    
+    const scoreInput = document.createElement('input');
+    scoreInput.type = 'number';
+    scoreInput.min = '0';
+    scoreInput.max = '10';
+    scoreInput.value = originalScore || '';
+    scoreInput.style.cssText = 'width:80px; padding:6px; border:1px solid #e5e7eb; border-radius:4px; margin-bottom:8px;';
+
+    const textarea = document.createElement('textarea');
+    textarea.value = originalText;
+    textarea.style.cssText = 'width:100%; min-height:100px; padding:8px; border:1px solid #e5e7eb; border-radius:4px; font-family:inherit; font-size:14px; margin-bottom:8px;';
+
+    const buttonGroup = document.createElement('div');
+    buttonGroup.style.cssText = 'display:flex; gap:8px;';
+
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = 'Save Changes';
+    saveBtn.style.cssText = 'padding:8px 16px; font-size:13px; background:#667eea; color:white; border:none; border-radius:6px; cursor:pointer;';
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.style.cssText = 'padding:8px 16px; font-size:13px; background:#718096; color:white; border:none; border-radius:6px; cursor:pointer;';
+
+    const errorMsg = document.createElement('div');
+    errorMsg.style.cssText = 'color:#f56565; font-size:13px; margin-top:8px;';
+
+    // Disable edit and delete buttons during edit mode
+    const editBtn = header.querySelector('.edit-btn');
+    const deleteBtn = header.querySelector('.delete-btn');
+    if (editBtn) editBtn.disabled = true;
+    if (deleteBtn) deleteBtn.disabled = true;
+
+    saveBtn.addEventListener('click', async () => {
+      const newText = textarea.value.trim();
+      const newScore = scoreInput.value.trim();
+
+      if (!newText) {
+        errorMsg.textContent = 'Review text cannot be empty';
+        return;
+      }
+
+      try {
+        const userId = localStorage.getItem('userId');
+        const username = localStorage.getItem('currentUser');
+
+        const res = await fetch(`/api/reviews/${encodeURIComponent(reviewData.id)}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: userId,
+            username: username,
+            score: newScore === '' ? null : Number(newScore),
+            review: newText
+          })
+        });
+
+        const result = await res.json();
+        
+        if (!result.success) {
+          // Check for integrity constraint violation (review deleted by admin)
+          if (result.code === 'REVIEW_DELETED') {
+            errorMsg.textContent = result.message;
+            errorMsg.style.cssText = 'color:#f56565; font-size:14px; font-weight:bold; margin-top:8px; padding:12px; background:#fee; border-radius:6px; border:1px solid #f56565;';
+            
+            // Disable save button, only allow cancel
+            saveBtn.disabled = true;
+            saveBtn.style.opacity = '0.5';
+            saveBtn.style.cursor = 'not-allowed';
+            return;
+          }
+          throw new Error(result.message || 'Failed to update review');
+        }
+
+        // Success - reload reviews
+        await loadReviews();
+      } catch (err) {
+        errorMsg.textContent = 'Error: ' + err.message;
+      }
+    });
+
+    cancelBtn.addEventListener('click', () => {
+      // Restore original view
+      body.textContent = originalText;
+      body.style.display = 'block';
+      editForm.remove();
+      if (editBtn) editBtn.disabled = false;
+      if (deleteBtn) deleteBtn.disabled = false;
+    });
+
+    buttonGroup.appendChild(saveBtn);
+    buttonGroup.appendChild(cancelBtn);
+
+    editForm.appendChild(scoreLabel);
+    editForm.appendChild(scoreInput);
+    editForm.appendChild(textarea);
+    editForm.appendChild(buttonGroup);
+    editForm.appendChild(errorMsg);
+
+    // Hide original body and show edit form
+    body.style.display = 'none';
+    itemElement.appendChild(editForm);
   }
 
   function escapeHtml(unsafe) {

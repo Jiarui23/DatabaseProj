@@ -145,4 +145,92 @@ async function deleteReview(req, res) {
   }
 }
 
-module.exports = { listReviews, createReview, deleteReview };
+// PUT /api/reviews/:id
+// Body should include: { userId, username, score, review }
+async function updateReview(req, res) {
+  try {
+    const reviewId = req.params.id;
+    const { userId, username, score, review: reviewText } = req.body;
+
+    // Check if user is logged in
+    if (!userId || !username) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'You must be logged in to edit reviews' 
+      });
+    }
+
+    // Validate review text
+    const sanitizedReview = sanitizeReviewText(reviewText);
+    if (!sanitizedReview) {
+      return res.status(400).json({ success: false, message: 'Review text is required' });
+    }
+
+    const normalizedScore = normalizeScore(score);
+
+    // Get the review to check ownership AND existence (integrity constraint)
+    const getReviewSql = 'SELECT id, username FROM anime_hub.`review` WHERE id = ?';
+    const [reviews] = await pool.query(getReviewSql, [reviewId]);
+
+    if (reviews.length === 0) {
+      return res.status(410).json({ 
+        success: false, 
+        message: 'Review no longer exists. It may have been deleted by an admin.',
+        code: 'REVIEW_DELETED'
+      });
+    }
+
+    const existingReview = reviews[0];
+
+    // Check permissions: only the review owner can edit
+    if (existingReview.username !== username) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'You can only edit your own reviews' 
+      });
+    }
+
+    // Update the review
+    const updateSql = `
+      UPDATE anime_hub.\`review\`
+      SET \`score\` = ?, \`review\` = ?
+      WHERE id = ?
+    `;
+    const [result] = await pool.query(updateSql, [normalizedScore, sanitizedReview, reviewId]);
+    
+    if (result.affectedRows === 0) {
+      return res.status(410).json({ 
+        success: false, 
+        message: 'Review no longer exists. It may have been deleted by an admin.',
+        code: 'REVIEW_DELETED'
+      });
+    }
+
+    // Get updated review
+    const selectSql = `
+      SELECT id, anime_id, \`username\` AS \`user\`, \`score\`, \`review\`,
+             DATE_FORMAT(\`post_date\`, '%Y-%m-%d') AS postDate,
+             TIME_FORMAT(\`post_time\`, '%H:%i:%s') AS postTime
+        FROM anime_hub.\`review\`
+       WHERE id = ?
+       LIMIT 1`;
+    const [updatedRows] = await pool.query(selectSql, [reviewId]);
+    
+    // Log review edit
+    logAction(userId, username, 'edit_review', { 
+      reviewId,
+      score: normalizedScore
+    });
+    
+    res.json({ 
+      success: true, 
+      message: 'Review updated successfully',
+      data: updatedRows[0]
+    });
+  } catch (error) {
+    console.error('updateReview error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update review', error: error.message });
+  }
+}
+
+module.exports = { listReviews, createReview, deleteReview, updateReview };
