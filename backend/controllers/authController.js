@@ -155,4 +155,59 @@ async function logout(req, res) {
   });
 }
 
-module.exports = { register, login, logout };
+// POST /api/auth/reset-password
+async function resetPassword(req, res) {
+  try {
+    const { username, newPassword } = req.body;
+
+    // Validation
+    if (!username || !newPassword) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Username and new password are required' 
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Password must be at least 6 characters long' 
+      });
+    }
+
+    // Check if user exists
+    const checkUserSql = 'SELECT id FROM anime_hub.Users WHERE username = ?';
+    const [users] = await pool.query(checkUserSql, [username]);
+
+    if (users.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Username not found' 
+      });
+    }
+
+    // Hash new password
+    const hashedPassword = hashPassword(newPassword);
+
+    // Update password
+    const updateSql = 'UPDATE anime_hub.Users SET password = ? WHERE username = ?';
+    await pool.query(updateSql, [hashedPassword, username]);
+
+    // Log password reset
+    logAction(users[0].id, username, 'password_reset', { timestamp: new Date() });
+
+    res.json({
+      success: true,
+      message: 'Password reset successfully. You can now login with your new password.'
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Password reset failed', 
+      error: error.message 
+    });
+  }
+}
+
+module.exports = { register, login, logout, resetPassword };
