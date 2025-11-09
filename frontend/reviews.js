@@ -56,8 +56,8 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const currentUser = localStorage.getItem('currentUser');
-    const isAdmin = localStorage.getItem('isAdmin') === 'true';
+    const currentUser = sessionStorage.getItem('currentUser');
+    const isAdmin = sessionStorage.getItem('isAdmin') === 'true';
 
     const list = document.createElement('div');
     list.className = 'reviews-list';
@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
         delBtn.addEventListener('click', async () => {
           if (!confirm('Delete this review?')) return;
           try {
-            const userId = localStorage.getItem('userId');
+            const userId = sessionStorage.getItem('userId');
             const res = await fetch(`/api/reviews/${encodeURIComponent(row.id)}`, { 
               method: 'DELETE',
               headers: {
@@ -203,8 +203,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       try {
-        const userId = localStorage.getItem('userId');
-        const username = localStorage.getItem('currentUser');
+        const userId = sessionStorage.getItem('userId');
+        const username = sessionStorage.getItem('currentUser');
 
         const res = await fetch(`/api/reviews/${encodeURIComponent(reviewData.id)}`, {
           method: 'PUT',
@@ -280,8 +280,8 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       formMsg.textContent = '';
       
-      // Get current user from localStorage
-      const currentUser = localStorage.getItem('currentUser');
+      // Get current user from sessionStorage (tab-specific)
+      const currentUser = sessionStorage.getItem('currentUser');
       const user = currentUser || (inputUser.value || '').trim();
       const scoreVal = (inputScore.value || '').trim();
       const review = (inputText.value || '').trim();
@@ -341,7 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // Hide username input if user is logged in
-    const currentUser = localStorage.getItem('currentUser');
+    const currentUser = sessionStorage.getItem('currentUser');
     if (currentUser && inputUser) {
       inputUser.value = currentUser;
       inputUser.style.display = 'none';

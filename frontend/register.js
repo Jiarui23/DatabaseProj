@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const registerMessage = document.getElementById('registerMessage');
 
   // Check if user is already logged in
-  const currentUser = localStorage.getItem('currentUser');
+  const currentUser = sessionStorage.getItem('currentUser');
   if (currentUser) {
     window.location.href = '/';
     return;

@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const loginMessage = document.getElementById('loginMessage');
 
   // Check if user is already logged in
-  const currentUser = localStorage.getItem('currentUser');
+  const currentUser = sessionStorage.getItem('currentUser');
   if (currentUser) {
     window.location.href = '/';
     return;
@@ -36,10 +36,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (result.success) {
         showMessage('Login successful! Redirecting...', 'success');
         
-        // Store user info in localStorage
-        localStorage.setItem('currentUser', result.data.username);
-        localStorage.setItem('userId', result.data.id);
-        localStorage.setItem('isAdmin', result.data.is_admin ? 'true' : 'false');
+        // Store user info in sessionStorage (tab-specific)
+        sessionStorage.setItem('currentUser', result.data.username);
+        sessionStorage.setItem('userId', result.data.id);
+        sessionStorage.setItem('isAdmin', result.data.is_admin ? 'true' : 'false');
         
         // Redirect to home page after a brief delay
         setTimeout(() => {

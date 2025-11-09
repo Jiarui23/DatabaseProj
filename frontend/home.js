@@ -33,9 +33,9 @@ document.addEventListener('DOMContentLoaded', () => {
   async function loadList(query = '') {
     setLoading('Loading titles...');
     try {
-      // Get user info from localStorage
-      const userId = localStorage.getItem('userId');
-      const username = localStorage.getItem('currentUser');
+      // Get user info from sessionStorage (tab-specific)
+      const userId = sessionStorage.getItem('userId');
+      const username = sessionStorage.getItem('currentUser');
       
       // Build URL with user info
       let url = query ? `/api/anime?q=${encodeURIComponent(query)}` : '/api/anime';
@@ -109,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Auth UI functions
   function updateAuthUI() {
-    const currentUser = localStorage.getItem('currentUser');
+    const currentUser = sessionStorage.getItem('currentUser');
     
     if (currentUser) {
       authSection.innerHTML = `
@@ -132,9 +132,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function handleLogout() {
-    localStorage.removeItem('currentUser');
-    localStorage.removeItem('userId');
-    localStorage.removeItem('isAdmin');
+    sessionStorage.removeItem('currentUser');
+    sessionStorage.removeItem('userId');
+    sessionStorage.removeItem('isAdmin');
     updateAuthUI();
     alert('You have been logged out successfully');
   }
