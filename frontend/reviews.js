@@ -304,10 +304,28 @@ document.addEventListener('DOMContentLoaded', () => {
           body: JSON.stringify(payload)
         });
         const result = await res.json();
+        
+        // Handle rate limit error (429)
+        if (res.status === 429) {
+          formMsg.style.color = '#f56565';
+          formMsg.textContent = `⚠️ ${result.message || 'Rate limit exceeded'}`;
+          if (result.reviewsToday) {
+            formMsg.textContent += ` (${result.reviewsToday}/10 reviews today)`;
+          }
+          return;
+        }
+        
         if (!result.success) throw new Error(result.message || 'Failed to submit');
+        
         // Reset form and reload
         form.reset();
-        formMsg.textContent = 'Review submitted!';
+        formMsg.style.color = '#48bb78';
+        formMsg.textContent = '✓ Review submitted!';
+        
+        // Show remaining reviews count
+        if (result.remainingToday !== undefined) {
+          formMsg.textContent += ` (${result.remainingToday} remaining today)`;
+        }
         
         // If logged in, clear the user input field
         if (currentUser && inputUser) {
@@ -315,8 +333,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         await loadReviews();
-        setTimeout(() => { formMsg.textContent = ''; }, 1500);
+        setTimeout(() => { formMsg.textContent = ''; }, 3000);
       } catch (err) {
+        formMsg.style.color = '#f56565';
         formMsg.textContent = 'Error: ' + err.message;
       }
     });

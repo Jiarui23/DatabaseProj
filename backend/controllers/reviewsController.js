@@ -51,6 +51,10 @@ async function listReviews(req, res) {
 
 // POST /api/anime/:id/reviews  { user, score, review }
 async function createReview(req, res) {
+  // Get a connection from the pool for transaction
+  const connection = await pool.getConnection();
+  let lockAcquired = false;
+  
   try {
     const animeId = req.params.id;
     const username = sanitizeUser(req.body?.user);
@@ -58,14 +62,62 @@ async function createReview(req, res) {
     const reviewText = sanitizeReviewText(req.body?.review);
 
     if (!reviewText) {
+      connection.release();
       return res.status(400).json({ success: false, message: 'Review text is required' });
     }
 
+    // Acquire application-level lock for this user (prevents race conditions)
+    // This is better than FOR UPDATE as it avoids deadlocks
+    const lockName = `review_ratelimit_${username}`;
+    const [[{ lockResult }]] = await connection.query(
+      'SELECT GET_LOCK(?, 10) as lockResult',
+      [lockName]
+    );
+
+    if (lockResult !== 1) {
+      connection.release();
+      return res.status(503).json({ 
+        success: false, 
+        message: 'Could not acquire lock, please try again' 
+      });
+    }
+    lockAcquired = true;
+
+    // Start transaction
+    await connection.beginTransaction();
+
+    // Count recent reviews for this user (no FOR UPDATE needed now)
+    const rateLimitSql = `
+      SELECT COUNT(*) as count FROM anime_hub.\`review\`
+      WHERE \`username\` = ?
+      AND \`post_date\` >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+    `;
+    const [countResult] = await connection.query(rateLimitSql, [username]);
+    const reviewCount = countResult[0].count;
+
+    // Rate limit: maximum 10 reviews per day
+    if (reviewCount >= 10) {
+      await connection.rollback();
+      // Release lock
+      await connection.query('SELECT RELEASE_LOCK(?)', [lockName]);
+      connection.release();
+      return res.status(429).json({ 
+        success: false, 
+        message: 'Rate limit exceeded: Maximum 10 reviews per day',
+        retryAfter: 86400, // seconds (24 hours)
+        reviewsToday: reviewCount
+      });
+    }
+
+    // Insert the review
     const insertSql = `
       INSERT INTO anime_hub.\`review\` (\`anime_id\`, \`username\`, \`score\`, \`review\`, \`post_date\`, \`post_time\`)
       VALUES (?, ?, ?, ?, CURDATE(), CURTIME())
     `;
-    const [result] = await pool.query(insertSql, [animeId, username, score, reviewText]);
+    const [result] = await connection.query(insertSql, [animeId, username, score, reviewText]);
+
+    // Commit transaction (makes insert visible to other transactions)
+    await connection.commit();
 
     const id = result.insertId;
     const selectSql = `
@@ -75,19 +127,42 @@ async function createReview(req, res) {
         FROM anime_hub.\`review\`
        WHERE id = ?
        LIMIT 1`;
-    const [rows] = await pool.query(selectSql, [id]);
+    const [rows] = await connection.query(selectSql, [id]);
+
+    // Release lock AFTER all database operations are complete
+    await connection.query('SELECT RELEASE_LOCK(?)', [lockName]);
 
     // Log review creation
     logAction(null, username, 'add_review', { 
       animeId, 
       reviewId: id,
-      score 
+      score,
+      reviewsToday: reviewCount + 1
     });
 
-    res.status(201).json({ success: true, data: rows[0] });
+    res.status(201).json({ 
+      success: true, 
+      data: rows[0],
+      reviewsToday: reviewCount + 1,
+      remainingToday: 10 - (reviewCount + 1)
+    });
   } catch (error) {
+    // Rollback transaction on error
+    await connection.rollback();
     console.error('createReview error:', error);
     res.status(500).json({ success: false, message: 'Failed to create review', error: error.message });
+  } finally {
+    // Always release lock if acquired
+    if (lockAcquired) {
+      try {
+        const lockName = `review_ratelimit_${sanitizeUser(req.body?.user)}`;
+        await connection.query('SELECT RELEASE_LOCK(?)', [lockName]);
+      } catch (err) {
+        console.error('Error releasing lock:', err);
+      }
+    }
+    // Always release connection back to pool
+    connection.release();
   }
 }
 
